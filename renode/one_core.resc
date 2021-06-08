@@ -1,0 +1,21 @@
+using sysbus
+
+$name?="one_core"
+
+mach create $name
+machine LoadPlatformDescription @one_core.repl
+logLevel -1
+machine StartGdbServer 3333
+sysbus LogAllPeripheralsAccess true
+
+macro reset
+"""
+    sysbus LoadELF @risc_v_freertos/gcc/project.elf
+"""
+
+showAnalyzer sysbus.uart0
+showAnalyzer sysbus.uart1
+showAnalyzer sysbus.uart2
+showAnalyzer sysbus.uart3
+runMacro $reset
+start

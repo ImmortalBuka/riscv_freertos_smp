@@ -1,0 +1,23 @@
+using sysbus
+
+$name?="multi_core"
+
+mach create $name
+machine LoadPlatformDescription @multi_core.repl
+machine StartGdbServer 3333 true sysbus.cpu_0
+machine StartGdbServer 3334 true sysbus.cpu_1
+machine StartGdbServer 3335 true sysbus.cpu_2
+logLevel -1
+sysbus LogAllPeripheralsAccess true
+
+macro reset
+"""
+    sysbus LoadELF @risc_v_freertos/gcc/project.elf
+"""
+
+showAnalyzer sysbus.uart_0
+showAnalyzer sysbus.uart_1
+showAnalyzer sysbus.uart_2
+showAnalyzer sysbus.uart_3
+runMacro $reset
+start
