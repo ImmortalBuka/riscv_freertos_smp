@@ -27,51 +27,44 @@ INC = -I'$(GCC_INC_PATH)' -I'inc' -I'$(GCC_INC_LIB_PATH)' -I'inc/freertos' -I'in
 ###########################################################################################################
 #common
 ###########################################################################################################
-LLVM_GCC_C_CPP_COMMON = -O0 -g3 -Wextra -pedantic -ffreestanding -ffunction-sections -fno-common
-LLVM_GCC_C_CPP_COMMON += -Wall -fdata-sections -save-temps=obj -fmessage-length=0 -Wunused -Wfloat-equal
-LLVM_GCC_C_CPP_COMMON += -Wuninitialized -Wconversion -Wpointer-arith -Wpadded -Wshadow -Waggregate-return 
-LLVM_GCC_C_CPP_COMMON += -Waddress-of-packed-member -fno-unroll-loops -Warray-bounds -Wmissing-declarations
-LLVM_GCC_C_CPP_COMMON += -march=rv32imf -mabi=ilp32f $(INC)
+C_CPP_COMMON = -O0 -g3 -Wextra -pedantic -ffreestanding -ffunction-sections -fno-common -fanalyzer
+C_CPP_COMMON += -Wall -fdata-sections -save-temps=obj -fmessage-length=0 -Wunused -Wfloat-equal
+C_CPP_COMMON += -Wuninitialized -Wconversion -Wpointer-arith -Wpadded -Wshadow -Waggregate-return 
+C_CPP_COMMON += -Waddress-of-packed-member -fno-unroll-loops -Warray-bounds -Wmissing-declarations
+C_CPP_COMMON += -march=rv32imf -mabi=ilp32f $(INC) -fsigned-char -fstack-usage -Wlogical-op
+C_CPP_COMMON += -fopt-info-all-optall="gcc/opt.log" -fno-exceptions -Wmissing-attributes 
+C_CPP_COMMON += -Wattribute-alias -s -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -v -c -o
 #
-LLVM_GCC_C_COMMON = -std=gnu2x -Werror=implicit-function-declaration -Wno-pointer-sign -Wmissing-prototypes
-LLVM_GCC_C_COMMON += -Wno-pointer-sign -Wstrict-prototypes -Wbad-function-cast
+C_COMMON = -std=gnu2x -Werror=implicit-function-declaration -Wno-pointer-sign -Wmissing-prototypes
+C_COMMON += -Wno-pointer-sign -Wstrict-prototypes -Wbad-function-cast -Wno-discarded-qualifiers -nostdinc
 #
-LLVM_GCC_CPP_COMMON = -std=gnu++2a -Wctor-dtor-privacy -Weffc++ -Wsign-promo -fno-rtti -fno-use-cxa-atexit
-LLVM_GCC_CPP_COMMON += -fno-threadsafe-statics
-#
-GCC_C_CPP_COMMON = -fsigned-char -fstack-usage -fopt-info-all-optall="gcc/opt.log"
-GCC_C_CPP_COMMON += -Wlogical-op -fno-exceptions -Wmissing-attributes -Wattribute-alias -s -MMD -MP
-GCC_C_CPP_COMMON += -MF"$(@:%.o=%.d)" -MT"$(@)" -v -c -o $@ $<
-#
-GCC_C_FLAGS = -Wno-discarded-qualifiers -nostdinc
-#
-GCC_CPP_FLAGS = -Wnoexcept -Wsign-promo -fno-rtti -nostdinc++
+CPP_COMMON = -std=gnu++2a -Wctor-dtor-privacy -Weffc++ -Wsign-promo -fno-rtti -fno-use-cxa-atexit
+CPP_COMMON += -fno-threadsafe-statics -Wnoexcept -Wsign-promo -fno-rtti -nostdinc++
 # 
-LLVM_GCC_LINK_FLAGS = --gc-sections -T "${CURDIR}/ls.ld" -v --print-gc-sections --cref -o "$@"
-#
-GCC_LINK_FLAGS = --print-memory-usage -Map="gcc/$(PROJECT_NAME).map" --no-relax -m elf32lriscv
+LINK_FLAGS = --gc-sections -T "${CURDIR}/ls.ld" -v --print-gc-sections --cref -o "$@"
+LINK_FLAGS += --print-memory-usage -Map="gcc/$(PROJECT_NAME).map" --no-relax -m elf32lriscv
 ###########################################################################################################
 #reciepes
 ###########################################################################################################
-.PHONY:  build_gcc clean_gcc do_gcc
+.PHONY: build_gcc clean_gcc do_gcc renode
 
 clean_gcc:
 	rm -rf gcc
 	mkdir gcc
 
-do_gcc: gcc/$(PROJECT_NAME).lst gcc/$(PROJECT_NAME).bin gcc/$(PROJECT_NAME).hex
+do_gcc: gcc/$(PROJECT_NAME).lst gcc/$(PROJECT_NAME).bin
 
 build_gcc: clean_gcc
 	$(MAKE) do_gcc 2>&1 | tee -a gcc/make.log
 
 gcc/%.o: %.cpp
-	$(GCP) $(LLVM_GCC_C_CPP_COMMON) $(LLVM_GCC_CPP_COMMON) $(GCC_C_CPP_COMMON) $(GCC_CPP_FLAGS)
+	$(GCP) $(CPP_COMMON) $(C_CPP_COMMON) $@ $<
 
 gcc/%.o: %.c
-	$(GCC) $(LLVM_GCC_C_CPP_COMMON) $(LLVM_GCC_C_COMMON) $(GCC_C_CPP_COMMON) $(GCC_C_FLAGS)
+	$(GCC) $(C_COMMON) $(C_CPP_COMMON) $@ $<
 
 gcc/$(PROJECT_NAME).elf: $(GOBJ)
-	$(GLD) $(LLVM_GCC_LINK_FLAGS) $(GCC_LINK_FLAGS) $(wildcard gcc/*.o) 
+	$(GLD) $(LINK_FLAGS) $(wildcard gcc/*.o) 
 	$(GSZ) --format=berkeley --radix=10 $@
 
 gcc/$(PROJECT_NAME).bin: gcc/$(PROJECT_NAME).elf
@@ -80,5 +73,6 @@ gcc/$(PROJECT_NAME).bin: gcc/$(PROJECT_NAME).elf
 gcc/$(PROJECT_NAME).lst: gcc/$(PROJECT_NAME).elf
 	$(GOD) --source --all-headers --demangle --line-numbers --wide $< > $@
 
-gcc/$(PROJECT_NAME).hex: gcc/$(PROJECT_NAME).elf
-	$(GOC) -O ihex $< $@
+renode: gcc/$(PROJECT_NAME).elf
+	renode renode/multi_core.resc
+	

@@ -224,7 +224,7 @@ uint8_t float32_to_string(float data, uint8_t* string, uint8_t after_dot)
 	if(data < 0)
 	{
 		string[counter++] = '-';
-		data *= -1.0;
+		data *= -1.0f;
 	}
 	temp_loc_1 = (uint32_t)data;
 	delta = uint32_to_string(temp_loc_1, &string[counter]);
@@ -233,7 +233,7 @@ uint8_t float32_to_string(float data, uint8_t* string, uint8_t after_dot)
 	data = data - (float)temp_loc_1;
 	for(uint8_t i=0; i<after_dot; i++)
 	{
-		data = data * 10.0;
+		data = data * 10.0f;
 		temp_loc_1 = (uint32_t)data;
 		string[counter++] = temp_loc_1 + 0x30;
 		data = data - (float)temp_loc_1;
