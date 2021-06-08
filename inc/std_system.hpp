@@ -19,7 +19,7 @@ typedef struct __attribute__((packed, aligned(4)))
 	uint8_t month;
 	uint8_t year;
 } version_t;
-typedef void(*func_ptr)();
+typedef void(*func_ptr)(void);
 //
 void delay(uint32_t data);
 uint32_t hart_id(void);

@@ -6,23 +6,23 @@
 extern "C" {
 #endif
 //
-extern void uart_print_sized(void* uart, uint8_t* string, uint8_t size);
-void uart_print_string(void* uart, uint8_t* string);
-uint8_t uint8_to_string(uint8_t data, uint8_t* string);
-void uint8_to_hex_string(uint8_t data, uint8_t* string);
-void uint16_to_string(uint16_t data, uint8_t* string);
-void uint16_to_hex_string(uint16_t data, uint8_t* string);
-uint8_t uint32_to_string(uint32_t data, uint8_t* string_ptr);
-void uint32_to_hex_string(uint32_t data, uint8_t* string);
+extern void uart_print_sized(void* uart, const char* string, uint8_t size);
+void uart_print_string(void* uart, const char* string);
+uint8_t uint8_to_string(uint8_t data, char* string);
+void uint8_to_hex_string(uint8_t data, char* string);
+void uint16_to_string(uint16_t data, char* string);
+void uint16_to_hex_string(uint16_t data, char* string);
+uint8_t uint32_to_string(uint32_t data, char* string_ptr);
+void uint32_to_hex_string(uint32_t data, char* string);
 void print_hex_uint8(void* uart, uint8_t data);
 uint8_t char_to_hex_dig(uint8_t char_in, uint8_t* byte_out);
 uint8_t char_to_dec_dig(uint8_t char_in, uint8_t* byte_out);
-void uint64_to_hex_string(uint64_t data, uint8_t* string);
+void uint64_to_hex_string(uint64_t data, char* string);
 void print_straight_address(void* uart, uint8_t* addr);
 void print_reverse_address(void* uart, uint8_t* addr);
-uint8_t float32_to_string(float data, uint8_t* string, uint8_t after_dot);
-bool string_compare(uint8_t* first, uint8_t* second, uint8_t len);
-uint8_t string_len(uint8_t* data);
+uint8_t float32_to_string(float data, char* string, uint8_t after_dot);
+uint8_t string_len(const char* data);
+bool string_compare(const char* first, const char* second, uint8_t len);
 //
 #ifdef __cplusplus
 }

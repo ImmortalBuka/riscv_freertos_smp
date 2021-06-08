@@ -8,6 +8,7 @@ machine StartGdbServer 3333 true sysbus.cpu_0
 machine StartGdbServer 3334 true sysbus.cpu_1
 machine StartGdbServer 3335 true sysbus.cpu_2
 logLevel -1
+logLevel -1 file
 sysbus LogAllPeripheralsAccess true
 
 macro reset

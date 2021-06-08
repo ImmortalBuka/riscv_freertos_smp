@@ -1,11 +1,11 @@
 #include "print.hpp"
 //
-void uart_print_string(void* uart, uint8_t* string)
+void uart_print_string(void* uart, const char* string)
 {
 	uint8_t i = string_len(string);
 	uart_print_sized(uart, string, i);
 }
-uint8_t uint8_to_string(uint8_t data, uint8_t* string)
+uint8_t uint8_to_string(uint8_t data, char* string)
 {
 	uint8_t return_value = 0;
 	uint8_t temp_buf[3];
@@ -26,9 +26,9 @@ uint8_t uint8_to_string(uint8_t data, uint8_t* string)
 	*string = 0;
 	return return_value;
 }
-void uint8_to_hex_string(uint8_t data, uint8_t* string)
+void uint8_to_hex_string(uint8_t data, char* string)
 {
-    uint8_t temp;
+	uint8_t temp;
 	*(string++) = 0x30;
 	*(string++) = 0x78;
 	for(uint8_t i=2; i!=0; i--)
@@ -39,7 +39,7 @@ void uint8_to_hex_string(uint8_t data, uint8_t* string)
 	}
 	*string = 0;
 }
-void uint16_to_string(uint16_t data, uint8_t* string)
+void uint16_to_string(uint16_t data, char* string)
 {
 	uint8_t temp_buf[5];
 	uint8_t index = 0;
@@ -53,7 +53,6 @@ void uint16_to_string(uint16_t data, uint8_t* string)
 	{
 		if(temp_buf[j] > 0) index = j;
 	}
-	//*size = index+1;
 	for(int8_t j=index; j>(-1); j--)
 	{
 		*string = temp_buf[j] + 0x30;
@@ -61,7 +60,7 @@ void uint16_to_string(uint16_t data, uint8_t* string)
 	}
 	*string = 0;
 }
-void uint16_to_hex_string(uint16_t data, uint8_t* string)
+void uint16_to_hex_string(uint16_t data, char* string)
 {
 	uint8_t temp;
 	*(string++) = 0x30;
@@ -74,7 +73,7 @@ void uint16_to_hex_string(uint16_t data, uint8_t* string)
 	}
 	*string = 0;
 }
-uint8_t uint32_to_string(uint32_t data, uint8_t* string_ptr)
+uint8_t uint32_to_string(uint32_t data, char* string_ptr)
 {
 	uint8_t return_value = 0;
 	uint8_t temp_buf[10];
@@ -98,7 +97,7 @@ uint8_t uint32_to_string(uint32_t data, uint8_t* string_ptr)
 	*string_ptr = 0;
 	return return_value;
 }
-void uint32_to_hex_string(uint32_t data, uint8_t* string)
+void uint32_to_hex_string(uint32_t data, char* string)
 {
 	uint8_t temp;
 	*(string++) = 0x30;
@@ -164,7 +163,7 @@ uint8_t char_to_dec_dig(uint8_t char_in, uint8_t* byte_out)
 	}
 	else return 1;
 }
-void uint64_to_hex_string(uint64_t data, uint8_t* string)
+void uint64_to_hex_string(uint64_t data, char* string)
 {
 	uint8_t temp;
 	*(string++) = 0x30;
@@ -217,14 +216,14 @@ void print_reverse_address(void* uart, uint8_t* addr)
 	uart_print_char(uart, 0x3a);
 	print_hex_uint8(uart, addr[5]);
 }*/
-uint8_t float32_to_string(float data, uint8_t* string, uint8_t after_dot)
+uint8_t float32_to_string(float data, char* string, uint8_t after_dot)
 {
 	uint32_t temp_loc_1;
 	uint8_t counter = 0, delta;
 	if(data < 0)
 	{
 		string[counter++] = '-';
-		data *= -1.0;
+		data *= -1.0f;
 	}
 	temp_loc_1 = (uint32_t)data;
 	delta = uint32_to_string(temp_loc_1, &string[counter]);
@@ -233,7 +232,7 @@ uint8_t float32_to_string(float data, uint8_t* string, uint8_t after_dot)
 	data = data - (float)temp_loc_1;
 	for(uint8_t i=0; i<after_dot; i++)
 	{
-		data = data * 10.0;
+		data = data * 10.0f;
 		temp_loc_1 = (uint32_t)data;
 		string[counter++] = temp_loc_1 + 0x30;
 		data = data - (float)temp_loc_1;
@@ -241,7 +240,7 @@ uint8_t float32_to_string(float data, uint8_t* string, uint8_t after_dot)
 	string[counter] = 0;
 	return counter;
 }
-bool string_compare(uint8_t* first, uint8_t* second, uint8_t len)
+bool string_compare(const char* first, const char* second, uint8_t len)
 {
 	for(uint8_t i=0; i<len; i++)
 	{
@@ -249,7 +248,7 @@ bool string_compare(uint8_t* first, uint8_t* second, uint8_t len)
 	}
 	return true;
 }
-uint8_t string_len(uint8_t* data)
+uint8_t string_len(const char* data)
 {
 	uint8_t i=0;
 	while(data[i++]){};
