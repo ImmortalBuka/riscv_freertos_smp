@@ -19,7 +19,7 @@ GAR = $(GCC_BIN_PATH)ar
 ###########################################################################################################
 PROJECT_NAME = project
 SRC = main.cpp print.cpp std_system.cpp
-SRC += heap_1.c list.c port.c queue.c tasks.c
+SRC += heap_1.c list.c port_smp.c queue.c tasks.c
 VPATH = src src/freertos src/port
 GOBJ = $(patsubst %.cpp, gcc/%.o, $(SRC))
 GOBJ += $(patsubst %.c, gcc/%.o, $(SRC))

@@ -1,6 +1,6 @@
 #define configMTIME_BASE_ADDRESS				0
 #define configMTIMECMP_BASE_ADDRESS				0
-#define configMINIMAL_STACK_SIZE				128
+#define configMINIMAL_STACK_SIZE				64
 #define configMAX_PRIORITIES					2
 #define configUSE_PREEMPTION					1
 #define configUSE_IDLE_HOOK						0
@@ -16,3 +16,4 @@
 #define INCLUDE_vTaskDelay						1
 #define configAPPLICATION_ALLOCATED_HEAP		1
 #define configCHECK_FOR_STACK_OVERFLOW			0
+#define configNUM_CORES							1

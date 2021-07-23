@@ -4,8 +4,10 @@
 #include "task.h"
 #include <periph.h>
 //
+extern void* volatile pxCurrentTCBs[configNUM_CORES];
+extern uint32_t read_mcause(void);
+//
 uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute((aligned(4)));
-extern void* volatile pxCurrentTCB;
 uint32_t message[3] = {0};
 //
 StackType_t* pxPortInitialiseStack(StackType_t* pxTopOfStack, TaskFunction_t pxCode, void* pvParameters)
@@ -47,12 +49,11 @@ void timer_irq_handler(void)
 	uint32_t temp_loc = PLIC->TARGET[1].CLAIM_COMPLETE;
 	TIMER0->SR = 0;
 	xTaskIncrementTick();
-	vTaskSwitchContext();
+	vTaskSwitchContext(0);
 	PLIC->TARGET[1].CLAIM_COMPLETE = temp_loc;
 }
 __attribute__((naked, optimize("align-functions=4"))) void freertos_risc_v_trap_handler(void)
 {
-	extern uint32_t read_mcause(void);
 	asm("addi sp, sp, -120");
 	asm("sw x1, 1*4(sp)");
 	asm("sw x5, 2*4(sp)");
@@ -84,11 +85,10 @@ __attribute__((naked, optimize("align-functions=4"))) void freertos_risc_v_trap_
 	asm("sw x31, 28*4(sp)");
 	asm("csrr t0, mstatus");/* Required for MPIE bit. */
 	asm("sw t0, 29*4(sp)");
-	asm("lw t0, pxCurrentTCB");/* Load pxCurrentTCB. */
+	asm("lw t0, %[data]":: [data] "m" (pxCurrentTCBs[0]));/* Load pxCurrentTCB. */
 	asm("sw sp, 0( t0 )");/* Write sp to first TCB member. */
 	asm("csrr a0, mcause");
 	asm("csrr a1, mepc");
-	//save_context(0);
 	if(read_mcause() & (1<<31))
 	{
 		asm("sw a1, 0(sp)");
@@ -101,15 +101,15 @@ __attribute__((naked, optimize("align-functions=4"))) void freertos_risc_v_trap_
 		asm("sw a1, 0(sp)");/* Save updated exception return address. */
 		asm("li t0, 11");/* 11 == environment call. */
 		asm("la sp, __stack_top0");/* Switch to ISR stack before function call. */
-		vTaskSwitchContext();
-		CLINT[1] = 1;
-		CLINT[2] = 1;
+		vTaskSwitchContext(0);
+		//CLINT[1] = 1;
+		//CLINT[2] = 1;
 		/*vTaskSwitchContext();
 		pxCurrentTCB_by_core[1] = pxCurrentTCB;
 		vTaskSwitchContext();
 		pxCurrentTCB_by_core[2] = pxCurrentTCB;*/
 	}
-	asm("lw t1, pxCurrentTCB");/* Load pxCurrentTCB. */
+	asm("lw t1, %[data]":: [data] "m" (pxCurrentTCBs[0]));/* Load pxCurrentTCB. */
 	asm("lw sp, 0(t1)");/* Read sp from first TCB member. */
 	asm("lw t0, 0(sp)");/* Load mret with the address of the next instruction in the task to run next. */
 	asm("csrw mepc, t0");
@@ -148,7 +148,7 @@ __attribute__((naked, optimize("align-functions=4"))) void freertos_risc_v_trap_
 }
 __attribute__((naked)) void xPortStartFirstTask(void)
 {
-	asm("lw sp, pxCurrentTCB");/* Load pxCurrentTCB. */
+	asm("lw sp, %[data]":: [data] "m" (pxCurrentTCBs[0]));/* Load pxCurrentTCB. */
 	asm("lw sp, 0(sp)");/* Read sp from first TCB member. */
 	asm("lw x1, 0(sp)");/* Note for starting the scheduler the exception return address is used as the function return address. */
 	asm("lw x6, 3*4(sp)");/* t1 */
@@ -184,4 +184,43 @@ __attribute__((naked)) void xPortStartFirstTask(void)
 	asm("addi	sp, sp, 120");
 	asm("ret");
 }
-
+uint32_t portGET_CORE_ID(void)
+{
+	extern uint32_t get_core_id(void);
+	return get_core_id();
+}
+uint32_t portDISABLE_INTERRUPTS(void)
+{
+	asm("csrc mstatus, 8");
+	return 0;
+}
+void portYIELD_CORE(uint32_t id)
+{
+	portYIELD();
+}
+BaseType_t portCHECK_IF_IN_ISR(void)
+{
+	if(read_mcause()) return pdTRUE;
+	else return pdFALSE;
+}
+void portGET_TASK_LOCK(void)
+{
+}
+void portGET_ISR_LOCK(void)
+{
+}
+void portRELEASE_ISR_LOCK(void)
+{
+}
+void portRELEASE_TASK_LOCK(void)
+{
+}
+void portRESTORE_INTERRUPTS(uint32_t arg)
+{
+	(void)arg;
+	portENABLE_INTERRUPTS();
+}
+TaskHandle_t xTaskGetCurrentTaskHandle(void)
+{
+	return pxCurrentTCBs[0];
+}

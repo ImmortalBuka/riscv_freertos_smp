@@ -31,9 +31,9 @@ __attribute__((naked, noreturn)) void Reset_Handler(void)
 	//
 	uint32_t* pSrc;
 	uint32_t* pDest;
-	csr_write<CSR_MTVEC>((uint32_t)&clint_direct_mode_handler);
-	csr_write<CSR_MSTATUS>(0xaa);
-	csr_write<CSR_MIE>(0xaaa);
+	csr_write<csr::mtvec>((uint32_t)clint_direct_mode_handler);
+	csr_write<csr::mstatus>(0xaa);
+	csr_write<csr::mie>(0xaaa);
 	switch(hart_id())
 	{
 		case 0:
@@ -67,9 +67,9 @@ void call_ctors(const func_ptr* start, const func_ptr* end)
 }
 void enable_fpu(void)
 {
-	uint32_t temp_loc = csr_read<CSR_MSTATUS>();
+	uint32_t temp_loc = csr_read<csr::mstatus>();
 	temp_loc |= (1<<13);
-	csr_write<CSR_MSTATUS>(temp_loc);
+	csr_write<csr::mstatus>(temp_loc);
 }
 void delay(uint32_t data)
 {
@@ -82,13 +82,13 @@ void memset_word(uint32_t* ptr, uint32_t value, uint32_t size)
 }
 __attribute__((always_inline)) uint32_t hart_id(void)
 {
-	uint32_t temp_loc = csr_read<CSR_MHARTID>();
+	uint32_t temp_loc = csr_read<csr::mhartid>();
 	return temp_loc;
 }
 __attribute__((optimize("align-functions=4"))) void clint_direct_mode_handler(void)
 {
 	extern void project_default_handler(uint32_t mcause);
-	uint32_t mcause = csr_read<CSR_MCAUSE>();
+	uint32_t mcause = csr_read<csr::mcause>();
 	project_default_handler(mcause);
 }
 __attribute__ ((section(".isr_vectors"),naked,noreturn)) void isr_jumps(void)

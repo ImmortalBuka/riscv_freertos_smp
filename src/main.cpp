@@ -41,6 +41,7 @@ extern "C"
 	uint32_t read_mcause(void);
 	void print_task_create(uint32_t in);
 	void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName);
+	uint32_t get_core_id(void);
 }
 void project_default_handler(uint32_t mcause);
 void uart_init(sifive_uart_t* uart);
@@ -59,8 +60,8 @@ void func_03(void);
 volatile const version_t version __attribute__ ((section (".version"))) =
 {
 	.number = 0,
-	.day = 0x28,
-	.month = 0x06,
+	.day = 0x30,
+	.month = 0x07,
 	.year = 0x21,
 };
 child one(30);
@@ -93,18 +94,23 @@ __attribute__((noreturn)) void main(void)
 	TIMER0->DIER = 1;
 	TIMER0->CR1 = tim_cr1::TIM_CR1_CEN|tim_cr1::TIM_CR1_ARPE;
 #endif
-	ret_values = xTaskCreate(task_01, "01", configMINIMAL_STACK_SIZE * 2U, &parameter,
-		(tskIDLE_PRIORITY + 2), NULL);
+	ret_values = xTaskCreate(task_01, "01", configMINIMAL_STACK_SIZE, &parameter, 1, NULL);
 	if(ret_values != pdPASS) uart_print_string(UART0, "task_01 start error\r\n");
-	ret_values = xTaskCreate(task_02, "02", configMINIMAL_STACK_SIZE * 2U, &parameter,
-		(tskIDLE_PRIORITY + 1), NULL);
+	ret_values = xTaskCreate(task_02, "02", configMINIMAL_STACK_SIZE, &parameter, 2, NULL);
 	if(ret_values != pdPASS) uart_print_string(UART0, "task_02 start error\r\n");
-	ret_values = xTaskCreate(task_03, "03", configMINIMAL_STACK_SIZE * 2U, &parameter,
-		(tskIDLE_PRIORITY + 2), NULL);
+	ret_values = xTaskCreate(task_03, "03", configMINIMAL_STACK_SIZE, &parameter, 3, NULL);
 	if(ret_values != pdPASS) uart_print_string(UART0, "task_03 start error\r\n");
 	vTaskStartScheduler();
 	uart_print_string(UART0, "insufficient RAM\r\n");
 	while(1){}
+}
+__attribute__((noreturn, naked)) void main_2(void)
+{
+	while(1)
+	{
+		asm("wfi");
+		//asm("ecall");
+	}
 }
 void func_01(void)
 {
@@ -226,11 +232,11 @@ void project_default_handler(uint32_t mcause)
 	else//exception
 	{
 		uart_print_string(uart_ptrs[this_id], "exception\r\nPC: ");
-		temp_loc = csr_read<CSR_MEPC>();
+		temp_loc = csr_read<csr::mepc>();
 		uint32_to_hex_string(temp_loc, string);
 		uart_print_string(uart_ptrs[this_id], string);
 		uart_print_string(uart_ptrs[this_id], "\r\n");
-		csr_write<CSR_MEPC>(temp_loc + 4);
+		csr_write<csr::mepc>(temp_loc + 4);
 	}
 }
 void uart_irq(uint8_t i)
@@ -262,25 +268,17 @@ void sys_wr(uint32_t addr, uint32_t data)
 	volatile uint32_t* ptr = (uint32_t*)addr;
 	*ptr = data;
 }
-__attribute__((noreturn, naked)) void main_2(void)
-{
-	while(1)
-	{
-		asm("wfi");
-		//asm("ecall");
-	}
-}
 uint32_t read_mstatus(void)
 {
-	return csr_read<CSR_MSTATUS>();
+	return csr_read<csr::mstatus>();
 }
 uint32_t read_mcause(void)
 {
-	return csr_read<CSR_MCAUSE>();
+	return csr_read<csr::mcause>();
 }
 void write_mtvec(uint32_t in)
 {
-	csr_write<CSR_MTVEC>(in);
+	csr_write<csr::mtvec>(in);
 }
 void print_malloc(uint32_t address, uint32_t size)
 {
@@ -307,4 +305,8 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
 	uart_print_string(UART3, "stack overflow for ");
 	uart_print_string(UART3, pcTaskName);
 	uart_print_string(UART3, "\n\r");
+}
+uint32_t get_core_id(void)
+{
+	return hart_id();
 }

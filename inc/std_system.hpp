@@ -3,14 +3,19 @@
 #include <stdint.h>
 #include <stdbool.h>
 //
-#define CSR_MSTATUS						0x300
-#define CSR_MIE 						0x304
-#define CSR_MTVEC 						0x305
-#define CSR_MEPC 						0x341
-#define CSR_MCAUSE 						0x342
-#define CSR_pmcfg0 						0x3a0
-#define CSR_pmpaddr0					0x3b0
-#define CSR_MHARTID 					0xf14
+class csr
+{
+public:
+	static const uint32_t mstatus = 0x300;
+	static const uint32_t mie = 0x304;
+	static const uint32_t mtvec = 0x305;
+	static const uint32_t mepc = 0x341;
+	static const uint32_t mcause = 0x342;
+	static const uint32_t mip = 0x344;
+	static const uint32_t pmcfg0 = 0x3a0;
+	static const uint32_t pmpaddr0 = 0x3b0;
+	static const uint32_t mhartid = 0xf14;
+};
 //
 typedef struct __attribute__((packed, aligned(4)))
 {

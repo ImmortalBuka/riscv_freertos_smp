@@ -7,7 +7,6 @@
 #define portCRITICAL_NESTING_IN_TCB							1
 #define portTASK_FUNCTION_PROTO( vFunction, pvParameters ) 	void vFunction( void *pvParameters )
 #define portTASK_FUNCTION( vFunction, pvParameters ) 		void vFunction( void *pvParameters )
-#define portDISABLE_INTERRUPTS()							asm("csrc mstatus, 8")
 #define portENABLE_INTERRUPTS()								asm("csrs mstatus, 8")
 #define portENTER_CRITICAL()								vTaskEnterCritical()
 #define portEXIT_CRITICAL()									vTaskExitCritical()
@@ -30,3 +29,12 @@ void xPortStartFirstTask(void);
 void freertos_risc_v_trap_handler(void);
 void timer_irq_handler(void);
 void print_task_create(uint32_t in);
+uint32_t portGET_CORE_ID(void);
+uint32_t portDISABLE_INTERRUPTS(void);
+void portYIELD_CORE(uint32_t id);
+BaseType_t portCHECK_IF_IN_ISR(void);
+void portGET_TASK_LOCK(void);
+void portGET_ISR_LOCK(void);
+void portRELEASE_ISR_LOCK(void);
+void portRELEASE_TASK_LOCK(void);
+void portRESTORE_INTERRUPTS(uint32_t arg);
