@@ -27,7 +27,7 @@ INC = -I'$(GCC_INC_PATH)' -I'inc' -I'$(GCC_INC_LIB_PATH)' -I'inc/freertos' -I'in
 ###########################################################################################################
 #common
 ###########################################################################################################
-C_CPP_COMMON = -O0 -g3 -Wextra -pedantic -ffreestanding -ffunction-sections -fno-common
+C_CPP_COMMON = -O0 -g3 -Wextra -pedantic -ffreestanding -ffunction-sections -fno-common -fanalyzer
 C_CPP_COMMON += -Wall -fdata-sections -save-temps=obj -fmessage-length=0 -Wunused -Wfloat-equal
 C_CPP_COMMON += -Wuninitialized -Wconversion -Wpointer-arith -Wpadded -Wshadow -Waggregate-return 
 C_CPP_COMMON += -Waddress-of-packed-member -fno-unroll-loops -Warray-bounds -Wmissing-declarations
@@ -39,7 +39,7 @@ C_COMMON = -std=gnu2x -Werror=implicit-function-declaration -Wno-pointer-sign -W
 C_COMMON += -Wno-pointer-sign -Wstrict-prototypes -Wbad-function-cast -Wno-discarded-qualifiers -nostdinc
 #
 CPP_COMMON = -std=gnu++2a -Wctor-dtor-privacy -Weffc++ -Wsign-promo -fno-rtti -fno-use-cxa-atexit
-CPP_COMMON += -fno-threadsafe-statics -Wnoexcept -Wsign-promo -fno-rtti -nostdinc++ #-Werror=old-style-cast
+CPP_COMMON += -fno-threadsafe-statics -Wnoexcept -Wsign-promo -fno-rtti -nostdinc++
 # 
 LINK_FLAGS = --gc-sections -T "${CURDIR}/ls.ld" -v --print-gc-sections --cref -o "$@"
 LINK_FLAGS += --print-memory-usage -Map="gcc/$(PROJECT_NAME).map" --no-relax -m elf32lriscv
