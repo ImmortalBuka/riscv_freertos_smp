@@ -3,6 +3,8 @@
 #include "print.hpp"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
+#include "fifo.hpp"
+#include <string.h>
 //
 typedef float float32_t;
 class base
@@ -12,6 +14,10 @@ class base
 		void func(void)
 		{
 			a++;
+		}
+		void func_2(void)
+		{
+			a += 3;
 		}
 		base(void) : a(10)
 		{};
@@ -54,15 +60,16 @@ void uart_print_sized(void* uart, const char* string, uint8_t size);
 void uart_irq(uint8_t i);
 void sys_wr(uint32_t addr, uint32_t data);
 void func_01(void);
+void func_02(uint8_t test_num);
 uint16_t halfword_swap_byte(uint16_t in);
 void func_03(void);
 //
 volatile const version_t version __attribute__ ((section (".version"))) =
 {
 	.number = 0,
-	.day = 0x30,
-	.month = 0x07,
-	.year = 0x21,
+	.day = 0x17,
+	.month = 0x01,
+	.year = 0x22,
 };
 child one(30);
 void* const uart_ptrs[] =
@@ -83,6 +90,8 @@ __attribute__((noreturn)) void main(void)
 		uart_init(static_cast<sifive_uart_t*>(uart_ptrs[i]));
 		uart_print_string(uart_ptrs[i], "init done\n");
 	}
+	func_02(1);
+	while(1){};
 #if 0
 	//timer irq for all cores
 	PLIC->TARGET_ENABLES[1].ENABLES[0] = (1<<1)|(1<<5);
@@ -102,6 +111,7 @@ __attribute__((noreturn)) void main(void)
 	if(ret_values != pdPASS) uart_print_string(UART0, "task_03 start error\r\n");
 	vTaskStartScheduler();
 	uart_print_string(UART0, "insufficient RAM\r\n");
+	//func_01();
 	while(1){}
 }
 __attribute__((noreturn, naked)) void main_2(void)
@@ -118,6 +128,7 @@ void func_01(void)
 	one.func();
 	uint32_to_string(one.a, string);
 	uart_print_string(UART0, string);
+	//string[256] = 0x19;//-Warray-bounds
 	uart_print_string(UART0, "\r\n");
 	uint32_to_string(one.base::a, string);
 	uart_print_string(UART0, string);
@@ -125,9 +136,8 @@ void func_01(void)
 }
 uint16_t halfword_swap_byte(uint16_t in)
 {
-	uint16_t temp_loc_1 = (in & 0xff) << 8;
-	uint16_t temp_loc_2 = (in & 0xff00) >> 8;
-	return (temp_loc_1|temp_loc_2);
+	//return ((in & 0xff) << 8)|((in & 0xff00) >> 8);
+	return __builtin_bswap16(in);
 }
 void func_03(void)
 {
@@ -309,4 +319,67 @@ void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
 uint32_t get_core_id(void)
 {
 	return hart_id();
+}
+void func_02(uint8_t test_num)
+{
+	constexpr uint8_t size = 4;
+	uint8_t test_fifo_buffer[256];
+	fifo<uint8_t> test_fifo(test_fifo_buffer, size);
+	uint32_t temp_loc;
+	uint8_t idx = 0xaa;
+	test_fifo.print_debug(UART0);
+	if(test_num == 0)
+	{
+		for(uint32_t i=0; i<(size+2); i++)
+		{
+			temp_loc = test_fifo.write(&idx, 1);
+			test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART0, "fail to wr - not enough space\r\n");
+		}
+		for(uint32_t i=0; i<10; i++)
+		{
+			temp_loc = test_fifo.read(&idx, 1);
+			test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART0, "fail to rd - no more data\r\n");
+		}
+	}
+	if(test_num == 1)
+	{
+		for(uint32_t i=0; i<size; i++)
+		{
+			temp_loc = test_fifo.write(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.write(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.write(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.read(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
+			else test_fifo.print_debug(UART0);
+		}
+	}
+	if(test_num == 2)
+	{
+		for(uint32_t i=0; i<size; i++)
+		{
+			temp_loc = test_fifo.write(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.write(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.read(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.read(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
+			else test_fifo.print_debug(UART0);
+			temp_loc = test_fifo.read(&idx, 1);
+			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
+			else test_fifo.print_debug(UART0);
+		}
+	}
 }

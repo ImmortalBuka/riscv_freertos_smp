@@ -6,10 +6,29 @@
 //
 extern void* volatile pxCurrentTCBs[configNUM_CORES];
 extern uint32_t read_mcause(void);
+extern uint32_t get_core_id(void);
 //
 uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute((aligned(4)));
-uint32_t message[3] = {0};
+uint32_t shared_mem[3][3] = {0};//configNUM_CORES
 //
+void send_irq_msg_to_other_core(uint8_t id, uint32_t msg)
+{
+	shared_mem[get_core_id()][id] = msg;
+	CLINT[id] = 1;
+}
+uint32_t read_msg_from_other_core(void)
+{
+	uint32_t ret_value = 0, temp_loc = get_core_id();//configNUM_CORES
+	for(uint32_t i=0; i<3; i++)
+	{
+		if(shared_mem[i][temp_loc])
+		{
+			ret_value = shared_mem[i][temp_loc];
+			shared_mem[i][temp_loc] = 0;
+		}
+	}
+	return ret_value;
+}
 StackType_t* pxPortInitialiseStack(StackType_t* pxTopOfStack, TaskFunction_t pxCode, void* pvParameters)
 {
 	extern uint32_t read_mstatus(void);
@@ -55,15 +74,15 @@ void timer_irq_handler(void)
 __attribute__((naked, optimize("align-functions=4"))) void freertos_risc_v_trap_handler(void)
 {
 	asm("addi sp, sp, -120");
-	asm("sw x1, 1*4(sp)");
-	asm("sw x5, 2*4(sp)");
-	asm("sw x6, 3*4(sp)");
-	asm("sw x7, 4*4(sp)");
-	asm("sw x8, 5*4(sp)");
-	asm("sw x9, 6*4(sp)");
-	asm("sw x10, 7*4(sp)");
-	asm("sw x11, 8*4(sp)");
-	asm("sw x12, 9*4(sp)");
+	asm("sw x1,   1*4(sp)");
+	asm("sw x5,   2*4(sp)");
+	asm("sw x6,   3*4(sp)");
+	asm("sw x7,   4*4(sp)");
+	asm("sw x8,   5*4(sp)");
+	asm("sw x9,   6*4(sp)");
+	asm("sw x10,  7*4(sp)");
+	asm("sw x11,  8*4(sp)");
+	asm("sw x12,  9*4(sp)");
 	asm("sw x13, 10*4(sp)");
 	asm("sw x14, 11*4(sp)");
 	asm("sw x15, 12*4(sp)");

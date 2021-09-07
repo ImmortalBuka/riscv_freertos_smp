@@ -42,6 +42,5 @@ template<const uint32_t addr> inline void csr_write(uint32_t data)
 {
 	asm("csrw %0, %1" :: "I"(addr), "r"(data));
 }
-
 //
 #endif//_STD_SYSTEM_H_
