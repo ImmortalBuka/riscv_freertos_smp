@@ -1,20 +1,26 @@
 cpu_0: CPU.RiscV32 @ sysbus
-    cpuType: "rv32imafc"
+    cpuType: "rv32imf"
     privilegeArchitecture: PrivilegeArchitecture.Priv1_11
     timeProvider: clint
     hartId: 0
 
 cpu_1: CPU.RiscV32 @ sysbus
-    cpuType: "rv32imafc"
+    cpuType: "rv32imf"
     privilegeArchitecture: PrivilegeArchitecture.Priv1_11
     timeProvider: clint
     hartId: 1
 
 cpu_2: CPU.RiscV32 @ sysbus
-    cpuType: "rv32imafc"
+    cpuType: "rv32imf"
     privilegeArchitecture: PrivilegeArchitecture.Priv1_11
     timeProvider: clint
     hartId: 2
+
+cpu_3: CPU.RiscV32 @ sysbus
+    cpuType: "rv32imf"
+    privilegeArchitecture: PrivilegeArchitecture.Priv1_11
+    timeProvider: clint
+    hartId: 3
 
 rom: Memory.MappedMemory @ sysbus 0
     size: 0x00080000
@@ -24,22 +30,23 @@ ram: Memory.MappedMemory @ sysbus 0x10000000
 
 plic: IRQControllers.PlatformLevelInterruptController @ sysbus 0x20000000
     numberOfSources: 64
-    numberOfTargets: 4
+    numberOfContexts: 4
     prioritiesEnabled : false
-    //9 - Supervisor external interrupt
     //11 - Machine external interrupt
-    [5,7]   -> cpu_0@[9,11]
-    [9,11]  -> cpu_1@[9,11]
-    [13,15] -> cpu_2@[9,11]
+    0 -> cpu_0@11
+    1 -> cpu_1@11
+    2 -> cpu_2@11
+    3 -> cpu_3@11
 
 clint: IRQControllers.CoreLevelInterruptor @ sysbus 0x24000000
     frequency: 10000000
-    numberOfTargets: 3
+    numberOfTargets: 4
     //3 - Machine software interrupt
     //7 - Machine timer interrupt
     [0,1] -> cpu_0@[3,7]
     [2,3] -> cpu_1@[3,7]
     [4,5] -> cpu_2@[3,7]
+    [6,7] -> cpu_3@[3,7]
 
 uart_0: UART.SiFive_UART  @ sysbus 0x30000000
     -> plic@1
@@ -53,4 +60,15 @@ timer_0: Timers.STM32_Timer @ sysbus <0x30004000, +0x400>
     frequency: 10000000
     initialLimit: 0xffffffff
     -> plic@5
-
+timer_1: Timers.STM32_Timer @ sysbus <0x30005000, +0x400>
+    frequency: 10000000
+    initialLimit: 0xffffffff
+    -> plic@6
+timer_2: Timers.STM32_Timer @ sysbus <0x30006000, +0x400>
+    frequency: 10000000
+    initialLimit: 0xffffffff
+    -> plic@7
+timer_3: Timers.STM32_Timer @ sysbus <0x30007000, +0x400>
+    frequency: 10000000
+    initialLimit: 0xffffffff
+    -> plic@8

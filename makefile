@@ -18,8 +18,7 @@ GAR = $(GCC_BIN_PATH)ar
 #project
 ###########################################################################################################
 PROJECT_NAME = project
-SRC = main.cpp print.cpp std_system.cpp
-SRC += heap_1.c list.c port_smp.c queue.c tasks.c
+SRC = main.cpp print.cpp std_system.cpp heap_1.c list.c port_smp.c queue.c tasks.c
 VPATH = src src/freertos src/port
 GOBJ = $(patsubst %.cpp, gcc/%.o, $(SRC))
 GOBJ += $(patsubst %.c, gcc/%.o, $(SRC))
@@ -33,7 +32,7 @@ C_CPP_COMMON += -Wuninitialized -Wconversion -Wpointer-arith -Wpadded -Wshadow -
 C_CPP_COMMON += -Waddress-of-packed-member -fno-unroll-loops -Warray-bounds=2 -Wmissing-declarations
 C_CPP_COMMON += -march=rv32imf -mabi=ilp32f $(INC) -fsigned-char -fstack-usage -Wlogical-op
 C_CPP_COMMON += -fopt-info-all-optall="gcc/opt.log" -fno-exceptions -Wmissing-attributes
-C_CPP_COMMON += -Wattribute-alias -s -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -v -c -fomit-frame-pointer
+C_CPP_COMMON += -Wattribute-alias -s -fomit-frame-pointer -fsingle-precision-constant
 #
 C_COMMON = -std=gnu2x -Werror=implicit-function-declaration -Wno-pointer-sign -Wmissing-prototypes
 C_COMMON += -Wno-pointer-sign -Wstrict-prototypes -Wbad-function-cast -Wno-discarded-qualifiers -nostdinc
@@ -58,10 +57,10 @@ build_gcc: clean_gcc
 	$(MAKE) do_gcc 2>&1 | tee -a gcc/make.log
 
 gcc/%.o: %.cpp
-	$(GCP) $(CPP_COMMON) $(C_CPP_COMMON) -o $@ $<
+	$(GCP) $(CPP_COMMON) $(C_CPP_COMMON) -v -c -o "$@" "$<"
 
 gcc/%.o: %.c
-	$(GCC) $(C_COMMON) $(C_CPP_COMMON) -o $@ $<
+	$(GCC) $(C_COMMON) $(C_CPP_COMMON) -v -c -o "$@" "$<"
 
 gcc/$(PROJECT_NAME).elf: $(GOBJ)
 	$(GLD) $(LINK_FLAGS) $(wildcard gcc/*.o) 

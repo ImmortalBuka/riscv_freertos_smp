@@ -17,3 +17,4 @@
 #define configAPPLICATION_ALLOCATED_HEAP		1
 #define configCHECK_FOR_STACK_OVERFLOW			0
 #define configNUM_CORES							1
+#define configUSE_CORE_AFFINITY					0

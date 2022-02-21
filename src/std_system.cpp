@@ -18,9 +18,7 @@ volatile const uint8_t compiler_gcc[4] __attribute__((section (".version"))) = {
 //
 __attribute__((naked, noreturn)) void Reset_Handler(void)
 {
-	extern void sys_init(void);
 	extern void main(void);
-	extern void main_2(void);
 	extern uint32_t __etext;
 	extern uint32_t __data_start__;
 	extern uint32_t __data_end__;
@@ -32,7 +30,7 @@ __attribute__((naked, noreturn)) void Reset_Handler(void)
 	uint32_t* pSrc;
 	uint32_t* pDest;
 	csr_write<csr::mtvec>((uint32_t)clint_direct_mode_handler);
-	csr_write<csr::mstatus>(0xaa);
+	csr_write<csr::mstatus>(0xaa|(1<<13));//enable fpu
 	csr_write<csr::mie>(0xaaa);
 	switch(hart_id())
 	{
@@ -44,7 +42,6 @@ __attribute__((naked, noreturn)) void Reset_Handler(void)
 			pDest = &__bss_start__;
 			while(pDest < &__bss_end__) *pDest++ = 0;
 			call_ctors(__cpp_begin, __cpp_end);
-			asm("j main");
 			break;
 		case 1:
 			asm("la sp, __stack_top1");
@@ -52,10 +49,13 @@ __attribute__((naked, noreturn)) void Reset_Handler(void)
 		case 2:
 			asm("la sp, __stack_top2");
 			break;
-		default:
+		case 3:
+			asm("la sp, __stack_top3");
 			break;
+		default:
+			while(1){};
 	}
-	asm("j main_2");
+	asm("j main");
 }
 void call_ctors(const func_ptr* start, const func_ptr* end)
 {
@@ -65,27 +65,17 @@ void call_ctors(const func_ptr* start, const func_ptr* end)
 		start++;
 	}
 }
-void enable_fpu(void)
-{
-	uint32_t temp_loc = csr_read<csr::mstatus>();
-	temp_loc |= (1<<13);
-	csr_write<csr::mstatus>(temp_loc);
-}
 void delay(uint32_t data)
 {
-	uint32_t temp1 = data;
+	volatile uint32_t temp1 = data;
 	while (temp1--) asm("NOP");
-}
-void memset_word(uint32_t* ptr, uint32_t value, uint32_t size)
-{
-	for(uint32_t i=0; i<(size>>2); i++) ptr[i] = value;
 }
 __attribute__((always_inline)) uint32_t hart_id(void)
 {
 	uint32_t temp_loc = csr_read<csr::mhartid>();
 	return temp_loc;
 }
-__attribute__((optimize("align-functions=4"))) void clint_direct_mode_handler(void)
+__attribute__((optimize("align-functions=32"), interrupt ("machine"))) void clint_direct_mode_handler(void)
 {
 	extern void project_default_handler(uint32_t mcause);
 	uint32_t mcause = csr_read<csr::mcause>();

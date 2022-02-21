@@ -67,11 +67,20 @@ class tim_cr1
 //
 PLIC_Type* const PLIC = reinterpret_cast<PLIC_Type*>(0x20000000);
 volatile uint32_t* const CLINT = reinterpret_cast<uint32_t*>(0x24000000);
-sifive_uart_t* const UART0 = reinterpret_cast<sifive_uart_t*>(0x30000000);
-sifive_uart_t* const UART1 = reinterpret_cast<sifive_uart_t*>(0x30001000);
-sifive_uart_t* const UART2 = reinterpret_cast<sifive_uart_t*>(0x30002000);
-sifive_uart_t* const UART3 = reinterpret_cast<sifive_uart_t*>(0x30003000);
-stm32_timer_t* const TIMER0 = reinterpret_cast<stm32_timer_t*>(0x30004000);
+sifive_uart_t* const UART[4] =
+{
+	reinterpret_cast<sifive_uart_t*>(0x30000000),
+	reinterpret_cast<sifive_uart_t*>(0x30001000),
+	reinterpret_cast<sifive_uart_t*>(0x30002000),
+	reinterpret_cast<sifive_uart_t*>(0x30003000),
+};
+stm32_timer_t* const TIMER[4] =
+{
+	reinterpret_cast<stm32_timer_t*>(0x30004000),
+	reinterpret_cast<stm32_timer_t*>(0x30005000),
+	reinterpret_cast<stm32_timer_t*>(0x30006000),
+	reinterpret_cast<stm32_timer_t*>(0x30007000),
+};
 //
 #endif
 

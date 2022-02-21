@@ -73,6 +73,7 @@ typedef struct
 #define UART2			((sifive_uart_t *)0x30002000)
 #define UART3			((sifive_uart_t *)0x30003000)
 #define TIMER0			((stm32_timer_t *)0x30004000)
+#define TIMER1			((stm32_timer_t *)0x30005000)
 //
 #ifdef __cplusplus
 }

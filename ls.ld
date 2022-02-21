@@ -49,8 +49,9 @@ SECTIONS
 
 __StackTop = (ORIGIN(RAM) + LENGTH(RAM));
 __stack_lenght = (__StackTop - __stack_start__);
-__stack_lenght /= 3;
+__stack_lenght /= 4;
 __stack_lenght &= 0xfffffffc;
-__stack_top2 = __stack_start__ + __stack_lenght;
+__stack_top3 = __stack_start__ + __stack_lenght;
+__stack_top2 = __stack_top3 + __stack_lenght;
 __stack_top1 = __stack_top2 + __stack_lenght;
 __stack_top0 = __stack_top1 + __stack_lenght;

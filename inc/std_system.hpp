@@ -28,11 +28,13 @@ typedef void(*func_ptr)(void);
 //
 void delay(uint32_t data);
 uint32_t hart_id(void);
-void enable_fpu(void);
 //
-template<uint32_t addr> inline uint32_t csr_read(void) __attribute__((always_inline));
+template<const uint32_t addr> inline uint32_t csr_read(void) __attribute__((always_inline));
 template<const uint32_t addr> inline void csr_write(uint32_t data) __attribute__((always_inline));
-template<uint32_t addr> inline uint32_t csr_read(void)
+template<const uint32_t addr> inline void csr_clear_bits(uint32_t data) __attribute__((always_inline));
+template<const uint32_t addr> inline void csr_set_bits(uint32_t data) __attribute__((always_inline));
+//
+template<const uint32_t addr> inline uint32_t csr_read(void)
 {
 	uint32_t temp_loc;
 	asm("csrr %0, %1" : "=r"(temp_loc) : "i"(addr));
@@ -41,6 +43,14 @@ template<uint32_t addr> inline uint32_t csr_read(void)
 template<const uint32_t addr> inline void csr_write(uint32_t data)
 {
 	asm("csrw %0, %1" :: "I"(addr), "r"(data));
+}
+template<const uint32_t addr> inline void csr_clear_bits(uint32_t data)
+{
+	asm("csrc %0, %1" :: "I"(addr), "r"(data));
+}
+template<const uint32_t addr> inline void csr_set_bits(uint32_t data)
+{
+	asm("csrs %0, %1" :: "I"(addr), "r"(data));
 }
 //
 #endif//_STD_SYSTEM_H_

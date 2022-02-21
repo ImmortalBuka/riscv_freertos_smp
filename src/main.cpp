@@ -7,47 +7,27 @@
 #include <string.h>
 //
 typedef float float32_t;
-class base
-{
-	public:
-		uint32_t a;
-		void func(void)
-		{
-			a++;
-		}
-		void func_2(void)
-		{
-			a += 3;
-		}
-		base(void) : a(10)
-		{};
-};
-class child : public base
-{
-	public:
-		uint32_t a;
-		void func(void)
-		{
-			base::func();
-			a++;
-		}
-		child(void) : a(20)
-		{};
-		child(uint32_t in) : a(in)
-		{};
-};
 //
 extern "C"
 {
 	void main(void);
-	void main_2(void);
-	uint32_t read_mstatus(void);
-	void print_malloc(uint32_t address, uint32_t size);
-	void write_mtvec(uint32_t in);
-	uint32_t read_mcause(void);
-	void print_task_create(uint32_t in);
+	void freertos_print_malloc(uint32_t address, uint32_t size);
+	void freertos_print_task_create(uint32_t in);
 	void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName);
-	uint32_t get_core_id(void);
+	uint32_t portGET_CORE_ID(void);
+	/*void portENABLE_INTERRUPTS(void);
+	void portRESTORE_INTERRUPTS(uint32_t arg);
+	void portYIELD(void);
+	void portGET_TASK_LOCK(void);
+	void portGET_ISR_LOCK(void);
+	void portRELEASE_ISR_LOCK(void);
+	void portRELEASE_TASK_LOCK(void);
+	void portYIELD_CORE(uint32_t id);
+	BaseType_t portCHECK_IF_IN_ISR(void);
+	TaskHandle_t xTaskGetCurrentTaskHandle(void);
+	StackType_t* pxPortInitialiseStack(StackType_t* pxTopOfStack, TaskFunction_t pxCode, void* pvParameters);
+	BaseType_t xPortStartScheduler(void);
+	uint32_t read_mcause(void);*/
 }
 void project_default_handler(uint32_t mcause);
 void uart_init(sifive_uart_t* uart);
@@ -55,113 +35,53 @@ void uart_print_char(void* uart, uint8_t data);
 void task_01(void* pvParameters);
 void task_02(void* pvParameters);
 void task_03(void* pvParameters);
-void print_uarts(void);
 void uart_print_sized(void* uart, const char* string, uint8_t size);
 void uart_irq(uint8_t i);
-void sys_wr(uint32_t addr, uint32_t data);
-void func_01(void);
 void func_02(uint8_t test_num);
-uint16_t halfword_swap_byte(uint16_t in);
-void func_03(void);
+void start_freertos(void);
 //
 volatile const version_t version __attribute__ ((section (".version"))) =
 {
 	.number = 0,
-	.day = 0x17,
-	.month = 0x01,
+	.day = 0x28,
+	.month = 0x03,
 	.year = 0x22,
 };
-child one(30);
-void* const uart_ptrs[] =
-{
-	static_cast<void*>(UART0),
-	static_cast<void*>(UART1),
-	static_cast<void*>(UART2),
-	static_cast<void*>(UART3),
-};
 uint32_t parameter = 0;
+volatile uint32_t clint_flag[4] = {0};
 //
-__attribute__((noreturn)) void main(void)
+void start_freertos(void)
 {
 	BaseType_t ret_values;
-	enable_fpu();
-	for(uint8_t i=0; i<4; i++)
-	{
-		uart_init(static_cast<sifive_uart_t*>(uart_ptrs[i]));
-		uart_print_string(uart_ptrs[i], "init done\n");
-	}
-	func_02(1);
-	while(1){};
-#if 0
-	//timer irq for all cores
-	PLIC->TARGET_ENABLES[1].ENABLES[0] = (1<<1)|(1<<5);
-	PLIC->TARGET_ENABLES[3].ENABLES[0] = 1<<2;
-	PLIC->TARGET_ENABLES[5].ENABLES[0] = 1<<3;
-	uart_print_string(uart_ptrs[0], "back\r\n");
-	TIMER0->ARR = 999;
-	TIMER0->PSC = 9999;
-	TIMER0->DIER = 1;
-	TIMER0->CR1 = tim_cr1::TIM_CR1_CEN|tim_cr1::TIM_CR1_ARPE;
-#endif
 	ret_values = xTaskCreate(task_01, "01", configMINIMAL_STACK_SIZE, &parameter, 1, NULL);
-	if(ret_values != pdPASS) uart_print_string(UART0, "task_01 start error\r\n");
+	if(ret_values != pdPASS) uart_print_string(UART[0], "task_01 start error\r\n");
 	ret_values = xTaskCreate(task_02, "02", configMINIMAL_STACK_SIZE, &parameter, 2, NULL);
-	if(ret_values != pdPASS) uart_print_string(UART0, "task_02 start error\r\n");
+	if(ret_values != pdPASS) uart_print_string(UART[0], "task_02 start error\r\n");
 	ret_values = xTaskCreate(task_03, "03", configMINIMAL_STACK_SIZE, &parameter, 3, NULL);
-	if(ret_values != pdPASS) uart_print_string(UART0, "task_03 start error\r\n");
+	if(ret_values != pdPASS) uart_print_string(UART[0], "task_03 start error\r\n");
 	vTaskStartScheduler();
-	uart_print_string(UART0, "insufficient RAM\r\n");
-	//func_01();
-	while(1){}
+	uart_print_string(UART[0], "insufficient RAM\r\n");
 }
-__attribute__((noreturn, naked)) void main_2(void)
+__attribute__((noreturn, naked)) void main(void)
 {
+	if(hart_id() == 0)
+	{
+		for(uint8_t i=0; i<4; i++)
+		{
+			uart_init(static_cast<sifive_uart_t*>(UART[i]));
+			PLIC->TARGET_ENABLES[i].ENABLES[0] |= (1<<(i+1));
+			uart_print_string(UART[i], "init done\n");
+		}
+		for(uint8_t i=0; i<4; i++)
+		{
+			//vPortSetupTimerInterrupt(i);
+			CLINT[i] = 1;
+		}
+		start_freertos();
+	}
 	while(1)
 	{
 		asm("wfi");
-		//asm("ecall");
-	}
-}
-void func_01(void)
-{
-	char string[256];
-	one.func();
-	uint32_to_string(one.a, string);
-	uart_print_string(UART0, string);
-	//string[256] = 0x19;//-Warray-bounds
-	uart_print_string(UART0, "\r\n");
-	uint32_to_string(one.base::a, string);
-	uart_print_string(UART0, string);
-	uart_print_string(UART0, "\r\n");
-}
-uint16_t halfword_swap_byte(uint16_t in)
-{
-	//return ((in & 0xff) << 8)|((in & 0xff00) >> 8);
-	return __builtin_bswap16(in);
-}
-void func_03(void)
-{
-	float32_t temp_loc = 1.0f;
-	char string[256];
-	float32_to_string(temp_loc, string, 3);
-	uart_print_string(UART0, "print float: ");
-	uart_print_string(UART0, string);
-	uart_print_string(UART0, "\r\n");
-}
-void print_uarts(void)
-{
-	uint32_t this_id = hart_id();
-	uart_init(UART0);
-	if(this_id < 3)
-	{
-		uart_init(static_cast<sifive_uart_t*>(uart_ptrs[this_id]));
-		uart_print_string(uart_ptrs[this_id], "cpu ");
-		uart_print_char(uart_ptrs[this_id], this_id + 0x30);
-		uart_print_string(uart_ptrs[this_id], "\r\n");
-	}
-	else
-	{
-		uart_print_string(UART0, "unknown cpu\r\n");
 	}
 }
 void task_01(void* pvParameters)
@@ -169,7 +89,7 @@ void task_01(void* pvParameters)
 	while(1)
 	{
 		(*((uint32_t*)pvParameters))++;
-		uart_print_string(uart_ptrs[hart_id()], "task_01\r\n");
+		uart_print_string(UART[hart_id()], "task_01\r\n");
 		vTaskDelay(2);
 	}
 }
@@ -178,7 +98,7 @@ void task_02(void* pvParameters)
 	while(1)
 	{
 		(*((uint32_t*)pvParameters))++;
-		uart_print_string(uart_ptrs[hart_id()], "task_02\r\n");
+		uart_print_string(UART[hart_id()], "task_02\r\n");
 		vTaskDelay(1);
 	}
 }
@@ -189,10 +109,10 @@ void task_03(void* pvParameters)
 	while(1)
 	{
 		this_id = hart_id();
-		uart_print_string(uart_ptrs[this_id], "task_03\r\nparameter: ");
+		uart_print_string(UART[this_id], "task_03\r\nparameter: ");
 		uint32_to_hex_string(*((uint32_t*)pvParameters), string);
-		uart_print_string(uart_ptrs[this_id], string);
-		uart_print_string(uart_ptrs[this_id], "\r\n");
+		uart_print_string(UART[this_id], string);
+		uart_print_string(UART[this_id], "\r\n");
 		vTaskDelay(3);
 	}
 }
@@ -201,21 +121,22 @@ void project_default_handler(uint32_t mcause)
 	uint32_t this_id = hart_id();
 	char string[11];
 	uint32_t temp_loc;
-	uart_print_string(uart_ptrs[this_id], "IRQ(core ");
-	uart_print_char(uart_ptrs[this_id], this_id + 0x30);
-	uart_print_string(uart_ptrs[this_id], "): ");
+	uart_print_string(UART[this_id], "IRQ(core ");
+	uart_print_char(UART[this_id], this_id + 0x30);
+	uart_print_string(UART[this_id], "): ");
 	uint32_to_hex_string(mcause, string);
-	uart_print_string(uart_ptrs[this_id], string);
-	uart_print_string(uart_ptrs[this_id], "\r\n");
+	uart_print_string(UART[this_id], string);
+	uart_print_string(UART[this_id], "\r\n");
 	if(mcause & (1<<31))//interrupt
 	{
 		switch(mcause & 0xffff)
 		{
 			case 3:
 				CLINT[this_id] = 0;
+				clint_flag[this_id] = 1;
 			break;
+			case 9:
 			case 11:
-				this_id = (this_id << 1) + 1;
 				temp_loc = PLIC->TARGET[this_id].CLAIM_COMPLETE;
 				switch(temp_loc)
 				{
@@ -226,32 +147,38 @@ void project_default_handler(uint32_t mcause)
 						uart_irq(temp_loc-1);
 					break;
 					case 5:
-						TIMER0->SR = 0;
+					case 6:
+					case 7:
+					case 8:
+						TIMER[temp_loc-5]->SR = 0;
 					break;
 					default:
 					break;
 				}
-				uart_print_string(uart_ptrs[this_id], "interrupt: ");
+				uart_print_string(UART[this_id], "interrupt ");
 				uint32_to_string(temp_loc, string);
+				uart_print_string(UART[this_id], string);
+				uart_print_string(UART[this_id], "\r\n");
 				PLIC->TARGET[this_id].CLAIM_COMPLETE = temp_loc;
-				uart_print_string(uart_ptrs[this_id], string);
-				uart_print_string(uart_ptrs[this_id], "\r\n");
 			break;
 		}
 	}
 	else//exception
 	{
-		uart_print_string(uart_ptrs[this_id], "exception\r\nPC: ");
+		uint16_to_string(mcause & 0xffff, string);
+		uart_print_string(UART[this_id], "exception ");
+		uart_print_string(UART[this_id], string);
+		uart_print_string(UART[this_id], "\r\nPC ");
 		temp_loc = csr_read<csr::mepc>();
 		uint32_to_hex_string(temp_loc, string);
-		uart_print_string(uart_ptrs[this_id], string);
-		uart_print_string(uart_ptrs[this_id], "\r\n");
+		uart_print_string(UART[this_id], string);
+		uart_print_string(UART[this_id], "\r\n");
 		csr_write<csr::mepc>(temp_loc + 4);
 	}
 }
 void uart_irq(uint8_t i)
 {
-	sifive_uart_t* ptr = static_cast<sifive_uart_t*>(uart_ptrs[i]);
+	sifive_uart_t* ptr = static_cast<sifive_uart_t*>(UART[i]);
 	while(ptr->ip)
 	{
 		(void)ptr->rxdata;
@@ -273,53 +200,6 @@ void uart_print_sized(void* uart, const char* string, uint8_t size)
 {
 	for(uint8_t i=0; i<size; i++) uart_print_char(uart, string[i]);
 }
-void sys_wr(uint32_t addr, uint32_t data)
-{
-	volatile uint32_t* ptr = (uint32_t*)addr;
-	*ptr = data;
-}
-uint32_t read_mstatus(void)
-{
-	return csr_read<csr::mstatus>();
-}
-uint32_t read_mcause(void)
-{
-	return csr_read<csr::mcause>();
-}
-void write_mtvec(uint32_t in)
-{
-	csr_write<csr::mtvec>(in);
-}
-void print_malloc(uint32_t address, uint32_t size)
-{
-	char string[11];
-	uart_print_string(UART3, "malloc ");
-	uint32_to_hex_string(address, string);
-	uart_print_string(UART3, string);
-	uart_print_string(UART3, " size ");
-	uint32_to_string(size, string);
-	uart_print_string(UART3, string);
-	uart_print_string(UART3, "\n\r");
-}
-void print_task_create(uint32_t in)
-{
-	char string[11];
-	uart_print_string(UART3, "task create ");
-	uint32_to_hex_string(in, string);
-	uart_print_string(UART3, string);
-	uart_print_string(UART3, "\n\r");
-}
-void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
-{
-	(void)xTask;
-	uart_print_string(UART3, "stack overflow for ");
-	uart_print_string(UART3, pcTaskName);
-	uart_print_string(UART3, "\n\r");
-}
-uint32_t get_core_id(void)
-{
-	return hart_id();
-}
 void func_02(uint8_t test_num)
 {
 	constexpr uint8_t size = 4;
@@ -327,20 +207,20 @@ void func_02(uint8_t test_num)
 	fifo<uint8_t> test_fifo(test_fifo_buffer, size);
 	uint32_t temp_loc;
 	uint8_t idx = 0xaa;
-	test_fifo.print_debug(UART0);
+	test_fifo.print_debug(UART[0]);
 	if(test_num == 0)
 	{
 		for(uint32_t i=0; i<(size+2); i++)
 		{
 			temp_loc = test_fifo.write(&idx, 1);
-			test_fifo.print_debug(UART0);
-			if(temp_loc == 0) uart_print_string(UART0, "fail to wr - not enough space\r\n");
+			test_fifo.print_debug(UART[0]);
+			if(temp_loc == 0) uart_print_string(UART[0], "fail to wr - not enough space\r\n");
 		}
 		for(uint32_t i=0; i<10; i++)
 		{
 			temp_loc = test_fifo.read(&idx, 1);
-			test_fifo.print_debug(UART0);
-			if(temp_loc == 0) uart_print_string(UART0, "fail to rd - no more data\r\n");
+			test_fifo.print_debug(UART[0]);
+			if(temp_loc == 0) uart_print_string(UART[0], "fail to rd - no more data\r\n");
 		}
 	}
 	if(test_num == 1)
@@ -348,17 +228,17 @@ void func_02(uint8_t test_num)
 		for(uint32_t i=0; i<size; i++)
 		{
 			temp_loc = test_fifo.write(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "wr skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.write(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "wr skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.write(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "wr skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.read(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "rd skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 		}
 	}
 	if(test_num == 2)
@@ -366,20 +246,59 @@ void func_02(uint8_t test_num)
 		for(uint32_t i=0; i<size; i++)
 		{
 			temp_loc = test_fifo.write(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "wr skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.write(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "wr skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "wr skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.read(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "rd skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.read(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "rd skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 			temp_loc = test_fifo.read(&idx, 1);
-			if(temp_loc == 0) uart_print_string(UART0, "rd skip\r\n");
-			else test_fifo.print_debug(UART0);
+			if(temp_loc == 0) uart_print_string(UART[0], "rd skip\r\n");
+			else test_fifo.print_debug(UART[0]);
 		}
 	}
+}
+void uart32_print(uint32_t id, char* text, uint32_t data)
+{
+	char string[11];
+	uart_print_string(UART[id], text);
+	uint32_to_hex_string(data, string);
+	uart_print_string(UART[id], string);
+	uart_print_string(UART[id], "\n\r");
+}
+//FreeRTOS port
+void freertos_print_malloc(uint32_t address, uint32_t size)
+{
+	char string[11];
+	uart_print_string(UART[3], "malloc ");
+	uint32_to_hex_string(address, string);
+	uart_print_string(UART[3], string);
+	uart_print_string(UART[3], " size ");
+	uint32_to_string(size, string);
+	uart_print_string(UART[3], string);
+	uart_print_string(UART[3], "\n\r");
+}
+void freertos_print_task_create(uint32_t in)
+{
+	char string[11];
+	uart_print_string(UART[3], "task create ");
+	uint32_to_hex_string(in, string);
+	uart_print_string(UART[3], string);
+	uart_print_string(UART[3], "\n\r");
+}
+void vApplicationStackOverflowHook(TaskHandle_t xTask, char* pcTaskName)
+{
+	(void)xTask;
+	uart_print_string(UART[3], "stack overflow for ");
+	uart_print_string(UART[3], pcTaskName);
+	uart_print_string(UART[3], "\n\r");
+}
+uint32_t portGET_CORE_ID(void)
+{
+	return hart_id();
 }
