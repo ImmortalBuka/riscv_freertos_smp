@@ -7,6 +7,7 @@
 uint32_t portDISABLE_INTERRUPTS(void);
 //
 uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute((aligned(4)));
+//pxCurrentTCBs
 //
 uint32_t portDISABLE_INTERRUPTS(void)
 {

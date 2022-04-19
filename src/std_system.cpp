@@ -29,7 +29,7 @@ __attribute__((naked, noreturn)) void Reset_Handler(void)
 	//
 	uint32_t* pSrc;
 	uint32_t* pDest;
-	csr_write<csr::mtvec>((uint32_t)clint_direct_mode_handler);
+	csr_write<csr::mtvec>(reinterpret_cast<uint32_t>(clint_direct_mode_handler));
 	csr_write<csr::mstatus>(0xaa|(1<<13));//enable fpu
 	csr_write<csr::mie>(0xaaa);
 	switch(hart_id())
@@ -67,15 +67,14 @@ void call_ctors(const func_ptr* start, const func_ptr* end)
 }
 void delay(uint32_t data)
 {
-	volatile uint32_t temp1 = data;
-	while (temp1--) asm("NOP");
+	while(data--) asm("NOP");
 }
 __attribute__((always_inline)) uint32_t hart_id(void)
 {
 	uint32_t temp_loc = csr_read<csr::mhartid>();
 	return temp_loc;
 }
-__attribute__((optimize("align-functions=32"), interrupt ("machine"))) void clint_direct_mode_handler(void)
+__attribute__((optimize("align-functions=32"),interrupt ("machine"))) void clint_direct_mode_handler(void)
 {
 	extern void project_default_handler(uint32_t mcause);
 	uint32_t mcause = csr_read<csr::mcause>();

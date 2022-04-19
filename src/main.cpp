@@ -39,12 +39,13 @@ void uart_print_sized(void* uart, const char* string, uint8_t size);
 void uart_irq(uint8_t i);
 void func_02(uint8_t test_num);
 void start_freertos(void);
+void uart32_print(uint32_t id, char* text, uint32_t data);
 //
 volatile const version_t version __attribute__ ((section (".version"))) =
 {
 	.number = 0,
-	.day = 0x28,
-	.month = 0x03,
+	.day = 0x19,
+	.month = 0x04,
 	.year = 0x22,
 };
 uint32_t parameter = 0;
@@ -69,7 +70,7 @@ __attribute__((noreturn, naked)) void main(void)
 		for(uint8_t i=0; i<4; i++)
 		{
 			uart_init(static_cast<sifive_uart_t*>(UART[i]));
-			PLIC->TARGET_ENABLES[i].ENABLES[0] |= (1<<(i+1));
+			PLIC->TARGET_ENABLES[i].ENABLES[0] = (1<<(i+1))|PLIC->TARGET_ENABLES[i].ENABLES[0];
 			uart_print_string(UART[i], "init done\n");
 		}
 		for(uint8_t i=0; i<4; i++)
@@ -88,7 +89,7 @@ void task_01(void* pvParameters)
 {
 	while(1)
 	{
-		(*((uint32_t*)pvParameters))++;
+		(*static_cast<uint32_t*>(pvParameters))++;
 		uart_print_string(UART[hart_id()], "task_01\r\n");
 		vTaskDelay(2);
 	}
@@ -97,7 +98,7 @@ void task_02(void* pvParameters)
 {
 	while(1)
 	{
-		(*((uint32_t*)pvParameters))++;
+		(*static_cast<uint32_t*>(pvParameters))++;
 		uart_print_string(UART[hart_id()], "task_02\r\n");
 		vTaskDelay(1);
 	}
@@ -110,7 +111,7 @@ void task_03(void* pvParameters)
 	{
 		this_id = hart_id();
 		uart_print_string(UART[this_id], "task_03\r\nparameter: ");
-		uint32_to_hex_string(*((uint32_t*)pvParameters), string);
+		uint32_to_hex_string(*static_cast<uint32_t*>(pvParameters), string);
 		uart_print_string(UART[this_id], string);
 		uart_print_string(UART[this_id], "\r\n");
 		vTaskDelay(3);
@@ -167,6 +168,10 @@ void project_default_handler(uint32_t mcause)
 	{
 		uint16_to_string(mcause & 0xffff, string);
 		uart_print_string(UART[this_id], "exception ");
+		uart_print_string(UART[this_id], string);
+		uart_print_string(UART[this_id], "\r\nSP ");
+		asm("mv %0, sp" : "=r"(temp_loc));
+		uint32_to_hex_string(temp_loc, string);
 		uart_print_string(UART[this_id], string);
 		uart_print_string(UART[this_id], "\r\nPC ");
 		temp_loc = csr_read<csr::mepc>();

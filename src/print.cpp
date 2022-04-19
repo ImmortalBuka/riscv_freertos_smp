@@ -225,17 +225,17 @@ uint8_t float32_to_string(float data, char* string, uint8_t after_dot)
 		string[counter++] = '-';
 		data *= -1.0f;
 	}
-	temp_loc_1 = (uint32_t)data;
+	temp_loc_1 = static_cast<uint32_t>(data);
 	delta = uint32_to_string(temp_loc_1, &string[counter]);
 	counter += delta;
 	string[counter++] = '.';
-	data = data - (float)temp_loc_1;
+	data = data - static_cast<float>(temp_loc_1);
 	for(uint8_t i=0; i<after_dot; i++)
 	{
 		data = data * 10.0f;
-		temp_loc_1 = (uint32_t)data;
+		temp_loc_1 = static_cast<uint32_t>(data);
 		string[counter++] = temp_loc_1 + 0x30;
-		data = data - (float)temp_loc_1;
+		data = data - static_cast<float>(temp_loc_1);
 	}
 	string[counter] = 0;
 	return counter;
